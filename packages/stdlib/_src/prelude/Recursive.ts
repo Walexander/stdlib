@@ -7,8 +7,8 @@ export * from "@tsplus/stdlib/prelude/Recursive/Annotated"
 /**
  * @tsplus type Recursive
  */
-export interface Recursive<F extends HKT> {
-  readonly caseValue: HKT.Kind<F, unknown, never, Recursive<F>>
+export interface Recursive<F extends HKT, in R = unknown, out E = never> {
+  readonly caseValue: HKT.Kind<F, R, E, Recursive<F, R, E>>
 }
 
 /**
@@ -38,18 +38,18 @@ export declare namespace Recursive {
 /**
  * @tsplus fluent Recursive unfix
  */
-export function unfix<F extends HKT>({
+export function unfix<F extends HKT, R = unknown, E = never>({
   caseValue
-}: Recursive<F>): HKT.Kind<F, unknown, unknown, Recursive<F>> {
+}: Recursive<F>): HKT.Kind<F, R, E, Recursive<F>> {
   return caseValue
 }
 
 /**
  * @tsplus static Recursive/Ops __call
  */
-export function fix<F extends HKT>(
-  caseValue: HKT.Kind<F, unknown, never, Recursive<F>>
-): Recursive<F> {
+export function fix<F extends HKT, R = unknown, E = never>(
+  caseValue: HKT.Kind<F, R, E, Recursive<F, R, E>>
+): Recursive<F, R, E> {
   return { caseValue }
 }
 
@@ -58,13 +58,13 @@ export function fix<F extends HKT>(
  *
  * @tsplus fluent Recursive fold
  */
-export function fold_<F extends HKT, R, E, Z>(
-  self: Recursive<F>,
+export function fold_<F extends HKT, Z, R = any, E = never>(
+  self: Recursive<F, R, E>,
   F: Covariant<F>,
   f: Recursive.Fn<F, Z, R, E>
 ): Z {
   return go(self)
-  function go(term: Recursive<F>): Z {
+  function go(term: Recursive<F, R, E>): Z {
     return f(F.map(go)(term.caseValue))
   }
 }
@@ -193,8 +193,11 @@ export const foldUp = Pipeable(foldUp_)
  *
  * @tsplus static Recursive/Ops unfold
  */
-export function unfold<F extends HKT, Z>(F: Covariant<F>, unfolder: Unfolder.Fn<F, Z>): (a: Z) => Recursive<F> {
-  return function self(a): Recursive<F> {
-    return Recursive(F.map(self)(unfolder(a)))
+export function unfold<F extends HKT, Z, R = unknown, E = never>(
+  F: Covariant<F>,
+  unfolder: Unfolder.Fn<F, Z, R, E>
+): (a: Z) => Recursive<F, R, E> {
+  return function self(a): Recursive<F, R, E> {
+    return Recursive<F, R, E>(F.map(self)(unfolder(a)))
   }
 }

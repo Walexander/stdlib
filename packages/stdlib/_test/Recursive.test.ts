@@ -1,3 +1,5 @@
+import { constant } from "@tsplus/stdlib/data/Function"
+import type * as P from "@tsplus/stdlib/prelude/Covariant"
 import { Recursive } from "@tsplus/stdlib/prelude/Recursive"
 import type { Annotated } from "@tsplus/stdlib/prelude/Recursive/Annotated"
 import { expect, vi } from "vitest"
@@ -257,6 +259,72 @@ describe.concurrent("Recursive", () => {
       assert.equal(countEval(five).run, 5)
       expect(spy).toHaveBeenCalledTimes(6)
       expect(spy).toHaveBeenLastCalledWith(5)
+    })
+  })
+})
+
+describe.concurrent("Recursive#List", () => {
+  type IList<R, A> = Cons<R, A> | Nil<A>
+  interface ListF extends HKT {
+    readonly type: IList<this["R"], this["A"]>
+  }
+  type List<A> = Recursive<ListF, A>
+  const Covariant = HKT.instance<P.Covariant<ListF>>({
+    map: (f) => (fa) => fa.map(f)
+  })
+  class Cons<R, A> {
+    readonly _tag = "Cons"
+    constructor(readonly head: R, readonly tail: A) {}
+    map<B>(f: (a: A) => B) {
+      return new Cons(this.head, f(this.tail))
+    }
+  }
+  class Nil<A> {
+    readonly _tag = "Nil"
+    map<B>(_: (a: A) => B) {
+      return this as any
+    }
+  }
+  const nil = <R>() => {
+    const _: HKT.Kind<ListF, R, never, List<R>> = new Nil()
+    return Recursive<ListF, R>(_)
+  }
+  const cons = <R, R1 extends R>(head: R1, tail: List<R>) => {
+    return Recursive<ListF, R1>(new Cons(head, tail))
+  }
+  const fromArray = Recursive.unfold<ListF, unknown[]>(
+    Covariant,
+    ([a, ...as]) => !a ? new Nil() : new Cons(a, as)
+  )
+  const toArray = Recursive.fold<ListF, unknown[]>(Covariant, (a) =>
+    Match.tag(a, {
+      "Nil": constant([]),
+      "Cons": (_) => [_.head, ..._.tail]
+    }))
+  const len = Recursive.fold(Covariant, (a: IList<unknown, number>) =>
+    Match.tag(a, {
+      "Nil": constant(0),
+      "Cons": (_) => 1 + _.tail
+    }))
+  const empty = nil()
+  const one = cons(1, empty)
+  const oneTwo = cons(2, one)
+
+  describe("length", () => {
+    it("of nil is 0", () => expect(len(empty)).to.equal(0))
+    it("of one is 1", () => expect(len(one)).to.equal(1))
+    it("of two is 2", () => expect(len(oneTwo)).to.equal(2))
+  })
+
+  describe("fromArray", () => {
+    it("len is equal to array size", () => expect(len(fromArray([1, 2, 3, 4]))).to.equal(4))
+    it("works with strings", () => expect(len(fromArray("hello".split("")))).to.equal(5))
+  })
+
+  describe("toArray", () => {
+    it("converting from then to", () => {
+      expect(toArray(fromArray([1, 2, 3, 4]))).to.deep.equal([1, 2, 3, 4])
+      expect(toArray(fromArray("hello".split("")))).to.deep.equal("hello".split(""))
     })
   })
 })

@@ -96,4 +96,97 @@ describe.concurrent("Associative", () => {
   it("void", () => {
     assert.isUndefined(Associative.void.combine(undefined, undefined))
   })
+
+  describe("derived", () => {
+    it("Maybe", () => {
+      const assocSum = Derive<Associative<Maybe<number>>>()
+      const assocString = Derive<Associative<Maybe<string>>>()
+      assert.deepStrictEqual(
+        assocSum.combine(
+          Maybe.some(1),
+          Maybe.some(3)
+        ),
+        Maybe.some(4)
+      )
+      assert.deepStrictEqual(
+        assocString.combine(Maybe.some("hello"), Maybe.some("world")),
+        Maybe.some("helloworld")
+      )
+      assert.deepStrictEqual(
+        assocSum.combine(
+          Maybe.none,
+          Maybe.some(3)
+        ),
+        Maybe.none
+      )
+    })
+
+    describe("Either", () => {
+      it("derives an appropriate instance for string", () => {
+        const assoc = Derive<Associative<Either<any, string>>>()
+        assert.deepStrictEqual(
+          assoc.combine(
+            Either.right("Foo"),
+            Either.right("Bar")
+          ),
+          Either.right("FooBar")
+        )
+      })
+      it("derives ImmuatableArray<string>", () => {
+        const assoc = Derive<Associative<Either<any, ImmutableArray<string>>>>()
+        assert.deepStrictEqual(
+          assoc.combine(
+            Either.right(ImmutableArray("Foo")),
+            Either.right(ImmutableArray("Bar"))
+          ),
+          Either.right(ImmutableArray("Foo", "Bar"))
+        )
+      })
+    })
+
+    describe("ImmutableArray", () => {
+      const assoc = Derive<Associative<ImmutableArray<string>>>()
+      it("derives instance for string", () => {
+        assert.deepStrictEqual(
+          assoc.combine(
+            ImmutableArray("Foo"),
+            ImmutableArray("Bar")
+          ),
+          ImmutableArray("Foo", "Bar")
+        )
+      })
+
+      it("handles empty", () => {
+        assert.deepStrictEqual(
+          assoc.combine(
+            ImmutableArray("Foo"),
+            ImmutableArray.empty()
+          ),
+          ImmutableArray("Foo")
+        )
+      })
+    })
+
+    describe("HashMap", () => {
+      it("combines numbers", () => {
+        const assoc = Derive<Associative<HashMap<unknown, number>>>()
+        const x = HashMap.empty().set("B", 1).set("A", 1)
+        const y = HashMap.empty().set("A", 2)
+        const expect = HashMap.empty().set("A", 3).set("B", 1)
+        assert.deepStrictEqual(assoc.combine(x, y), expect)
+      })
+      it("combines strings", () => {
+        const assoc = Derive<Associative<HashMap<unknown, string>>>()
+        const x = HashMap.empty().set("B", "Bx").set("A", "Ax")
+        const y = HashMap.empty().set("A", "Ay")
+        const expect = HashMap.empty().set("A", "AxAy").set("B", "Bx")
+        assert.deepStrictEqual(assoc.combine(x, y), expect)
+      })
+    })
+  })
 })
+/** @tsplus implicit */
+export const sum = Associative.sum.combine
+
+/** @tsplus implicit */
+export const concat = Associative.string.combine

@@ -1,107 +1,68 @@
-main()
-
 function main() {
-  /* one namespace per module with "aliased" constructor! */
-  const map0 = VoteMap(HashMap(Tuple("TsPlus", Votes(1)), Tuple("Effect", Votes(2))))
-
-  /* configure global imports that are still tree-shakeable */
-  const map1 = VoteMap(HashMap(Tuple("TsPlus", Votes(4)), Tuple("Effect-2", Votes(2))))
-
-  /* custom binary operators */
-  console.assert(map0.sum(map1) == (map0 + map1))
-
-  console.assert(
-    /* one object for operations, instances and methods */
-    (map0 + map1) == VoteMap.AssociativeSum.combine(map0, map1)
-  )
+  const map0 = VoteMap.empty().addVotes("A", 7)
+  const map1 = VoteMap.empty().addVotes("A", 2).addVotes("C", 9)
+  console.log("Total votes\n=======\n%s\n======", (map0 + map1).show)
+  const maps = Chunk.from([map0, map1, VoteMap.empty().addVotes("X", 15)])
+  const folded = maps.foldMap(VoteMap.AssociativeIdentity, identity)
+  //           == pipe(maps, Associative.fold(VoteMap.Associative)(VoteMap.identity))
+  console.log("Folded vote maps\n======\n%s\n======", folded.show)
 }
 
 type Topic = string
-/**
- * @tsplus type Example/Votes
- * @tsplus companion Example/Votes/Ops
- */
-export class Votes implements Hash, Equals {
+export class Votes {
   constructor(readonly value: number) {}
-  [Equals.sym](this: this, other: unknown): boolean {
-    return Votes.isVote(other) && Equals.equals(this.value, other.value)
-  }
-  [Hash.sym](this: this): number {
-    return Hash.combine(Hash.string("Example/Votes"), Hash.number(this.value))
-  }
 }
+/** @tsplus implicit */
+export const combineVotes = (x: Votes, y: Votes) =>
+  new Votes(Associative.sum.combine(x.value, y.value))
+export const votesAssociative = Derive<Associative<Votes>>()
 
+// VoteMap
+type VotesHashMap = HashMap<Topic, Votes>
 /**
- * @tsplus static Example/Votes/Ops __call
+ * @tsplus type examples/VoteMap
+ * @tsplus companion examples/VoteMap/Ops
  */
-export const makeVotes = (n: number) => new Votes(n)
-
-/**
- * @tsplus static Example/Votes/Ops isVote
- */
-export function isVote(t: unknown): t is Votes {
-  return typeof t == "object" && t instanceof Votes
+export class VoteMap {
+  constructor(readonly map: VotesHashMap = HashMap.empty()) {}
 }
+// Constructors
+/** @tsplus static examples/VoteMap/Ops empty */
+export const empty = (): VoteMap => new VoteMap(HashMap.empty())
+/** @tsplus static examples/VoteMap/Ops make */
+export const make = (x: HashMap<Topic, Votes>): VoteMap => new VoteMap(x)
 
+// Derive an associative instance for our HashMap
+export const combineHashMaps = Derive<Associative<VotesHashMap>>().combine
 /**
- * @tsplus fluent Example/Votes zip
+ * @tsplus implicit
+ * @tsplus static examples/VoteMap/Ops combine
+ * @tsplus operator examples/VoteMap +
  */
-export function zip_(self: Votes, that: Votes) {
-  return new Votes(self.value + that.value)
-}
+export const combine = (x: VoteMap, y: VoteMap): VoteMap =>
+  VoteMap.make(combineHashMaps(x.map, y.map))
+/** @tsplus static examples/VoteMap/Ops Associative */
+export const voteMapAssoc = Derive<Associative<VoteMap>>()
 
-/**
- * @tsplus static Example/Votes/Ops SumAssociative
- */
-export const VotesSumAssociative: Associative<Votes> = Associative(zip_)
+// AssociativeIdentity
+/** @tsplus static examples/VoteMap/Ops identity */
+export const voteMapIdentity = empty()
+/** @tsplus static examples/VoteMap/Ops AssociativeIdentity */
+export const voteMapAssocId = AssociativeIdentity.fromAssociative(voteMapIdentity, voteMapAssoc)
+// Fluent methods
+/** @tsplus fluent examples/VoteMap addVote */
+export const addVote = (self: VoteMap, topic: Topic): VoteMap => self.addVotes(topic, 1)
+/** @tsplus fluent examples/VoteMap addVotes */
+export const addVotes = (self: VoteMap, topic: Topic, count: number): VoteMap =>
+  VoteMap.Associative.combine(
+    self,
+    VoteMap.make(HashMap.make(Tuple(topic, new Votes(count))))
+  )
+/** @tsplus getter examples/VoteMap show */
+export const showVoteMaps = (self: VoteMap) =>
+  self.map.foldMap(
+    ImmutableArray.getAssociativeIdentity(),
+    ({ tuple: [topic, votes] }) => ImmutableArray([topic, votes.value].join(" = "))
+  ).toArray.join("\n")
 
-type VoteData = HashMap<Topic, Votes>
-/**
- * @tsplus type Example/VoteMap
- * @tsplus companion Example/VoteMap.Ops
- */
-export class VoteMap implements Hash, Equals {
-  constructor(readonly map: VoteData) {}
-  [Equals.sym](this: this, other: unknown): boolean {
-    return isVoteMap(other) && Equals.equals(this.map, other.map)
-  }
-  [Hash.sym](this: this): number {
-    return Hash.combine(Hash.string("Example/VoteMap"), this.map[Hash.sym]())
-  }
-}
-
-/**
- * @tsplus static Example/VoteMap.Ops __call
- */
-export const makeVoteMap = (map: VoteData) => new VoteMap(map)
-
-/**
- * @tsplus static Example/VoteMap.Ops isVoteMap
- */
-export function isVoteMap(t: unknown): t is VoteMap {
-  return typeof t === "object" && t instanceof VoteMap
-}
-
-/**
- * @tsplus static Example/VoteMap.Ops AssociativeSum
- */
-export const VoteMapSumAssociative: Associative<VoteMap> = pipe(
-  HashMap.getAssociative<Topic, Votes>(Votes.SumAssociative),
-  (A) => Associative((x, y) => new VoteMap(A.combine(x.map, y.map)))
-)
-
-/**
- * @tsplus operator Example/VoteMap ==
- * @tsplus fluent Example/VoteMap equals
- */
-export function equals(self: VoteMap, other: unknown) {
-  return self[Equals.sym](other)
-}
-
-/**
- * @tsplus operator Example/VoteMap +
- * @tsplus fluent Example/VoteMap sum
- */
-export function sumVoteMaps(self: VoteMap, that: VoteMap) {
-  return VoteMapSumAssociative.combine(self, that)
-}
+main()

@@ -7,6 +7,7 @@ export * from "@tsplus/stdlib/prelude/Recursive/foldDown"
 export * from "@tsplus/stdlib/prelude/Recursive/foldDownSome"
 export * from "@tsplus/stdlib/prelude/Recursive/foldM"
 export * from "@tsplus/stdlib/prelude/Recursive/foldUp"
+export * from "@tsplus/stdlib/prelude/Recursive/refold"
 export * from "@tsplus/stdlib/prelude/Recursive/unfold"
 export * from "@tsplus/stdlib/prelude/Recursive/Unfolder"
 // codegen:end

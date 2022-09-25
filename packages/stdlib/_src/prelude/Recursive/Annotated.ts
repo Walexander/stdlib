@@ -4,9 +4,9 @@ import type { Recursive } from "@tsplus/stdlib/prelude/Recursive"
  * @tsplus type Recursive/Annotated
  * @tsplus companion Recursive/Annotated/Ops
  */
-export class Annotated<F extends HKT, A, E = unknown> implements Recursive<F> {
+export class Annotated<F extends HKT, A, E = unknown, R = unknown> implements Recursive<F, E, R> {
   constructor(
-    readonly caseValue: HKT.Kind<F, unknown, unknown, Annotated<F, A>>,
+    readonly caseValue: HKT.Kind<F, R, E, Annotated<F, A, E, R>>,
     readonly annotations: A
   ) {}
 }
@@ -18,7 +18,7 @@ export declare namespace Annotated {
    * represents the value computed for each child.  aka `Course-of-Value (CV)Algebra`
    */
   export type Fn<F extends HKT, Z, E = unknown, R = unknown> = (
-    r: HKT.Kind<F, R, E, Annotated<F, Z>>
+    r: HKT.Kind<F, R, E, Annotated<F, Z, E, R>>
   ) => Z
 }
 

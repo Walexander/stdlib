@@ -3,7 +3,7 @@
  *
  * @tsplus static AssociativeIdentity/Ops string
  */
-export const string: AssociativeIdentity<string> = AssociativeIdentity.fromAssociative(
+export const joinVotes: AssociativeIdentity<string> = AssociativeIdentity.fromAssociative(
   "",
   Associative.string
 )
